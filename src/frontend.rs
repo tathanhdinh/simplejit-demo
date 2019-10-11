@@ -19,7 +19,7 @@ pub enum Expr {
     GlobalDataAddr(String),
 }
 
-peg::parser!{pub grammar parser() for str {
+peg::parser! {pub grammar parser() for str {
     use super::Expr;
 
     pub rule function() -> (String, Vec<String>, String, Vec<Expr>)

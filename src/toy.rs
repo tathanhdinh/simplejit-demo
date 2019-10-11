@@ -1,11 +1,11 @@
-use std::{mem, process};
+use std::process;
 
 mod frontend;
 mod jit;
 
 fn main() {
     // Create the JIT instance, which manages all generated functions and data.
-    let mut jit = jit::JIT::new();
+    let mut jit = jit::JIT::new("test.o");
 
     // A small test function.
     //
@@ -28,21 +28,10 @@ fn main() {
         }
     ";
 
-    // Pass the string to the JIT, and it returns a raw pointer to machine code.
-    let foo = jit.compile(&foo_code).unwrap_or_else(|msg| {
+    jit.compile(&foo_code).unwrap_or_else(|msg| {
         eprintln!("error: {}", msg);
         process::exit(1);
     });
-
-    // Cast the raw pointer to a typed function pointer. This is unsafe, because
-    // this is the critical point where you have to trust that the generated code
-    // is safe to be called.
-    //
-    // TODO: Is there a way to fold this transmute into `compile` above?
-    let foo = unsafe { mem::transmute::<_, fn(isize, isize) -> isize>(foo) };
-
-    // And now we can call it!
-    println!("the answer is: {}", foo(1, 0));
 
     // -------------------------------------------------------------------------//
 
@@ -62,14 +51,10 @@ fn main() {
     ";
 
     // Same as above.
-    let recursive_fib = jit.compile(&recursive_fib_code).unwrap_or_else(|msg| {
+    jit.compile(&recursive_fib_code).unwrap_or_else(|msg| {
         eprintln!("error: {}", msg);
         process::exit(1);
     });
-    let recursive_fib = unsafe { mem::transmute::<_, fn(isize) -> isize>(recursive_fib) };
-
-    // And we can now call it!
-    println!("recursive_fib(10) = {}", recursive_fib(10));
 
     // -------------------------------------------------------------------------//
 
@@ -93,14 +78,10 @@ fn main() {
     ";
 
     // Same as above.
-    let iterative_fib = jit.compile(&iterative_fib_code).unwrap_or_else(|msg| {
+    jit.compile(&iterative_fib_code).unwrap_or_else(|msg| {
         eprintln!("error: {}", msg);
         process::exit(1);
     });
-    let iterative_fib = unsafe { mem::transmute::<_, fn(isize) -> isize>(iterative_fib) };
-
-    // And we can now call it!
-    println!("iterative_fib(10) = {}", iterative_fib(10));
 
     // -------------------------------------------------------------------------//
 
@@ -119,12 +100,31 @@ fn main() {
         });
 
     // Same as above.
-    let hello = jit.compile(&hello_code).unwrap_or_else(|msg| {
+    jit.compile(&hello_code).unwrap_or_else(|msg| {
         eprintln!("error: {}", msg);
         process::exit(1);
     });
-    let hello = unsafe { mem::transmute::<_, fn() -> isize>(hello) };
 
-    // And we can now call it!
-    hello();
+    // -------------------------------------------------------------------------//
+
+    // Now let's write a main function, and call all the functions we just
+    // compiled. For now, this doesn't print the computed values; only the
+    // hello function prints something.
+    let main_code = "\
+        fn main(argc, argv) -> (r) {
+            foo(1, 0)
+            recursive_fib(10)
+            iterative_fib(10)
+            hello()
+        }
+    ";
+
+    // Same as above.
+    jit.compile(&main_code).unwrap_or_else(|msg| {
+        eprintln!("error: {}", msg);
+        process::exit(1);
+    });
+
+    // Now write out a .o file!
+    jit.finish();
 }
