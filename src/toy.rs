@@ -1,9 +1,4 @@
-extern crate cranelift;
-extern crate cranelift_module;
-extern crate cranelift_simplejit;
-
-use std::mem;
-use std::process;
+use std::{mem, process};
 
 mod frontend;
 mod jit;

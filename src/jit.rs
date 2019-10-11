@@ -1,10 +1,10 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, slice};
 
 use cranelift::prelude::*;
 use cranelift_module::{DataContext, Linkage, Module};
 use cranelift_simplejit::{SimpleJITBackend, SimpleJITBuilder};
-use frontend::*;
-use std::slice;
+
+use crate::frontend::*;
 
 /// The basic JIT class.
 pub struct JIT {
