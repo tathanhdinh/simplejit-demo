@@ -20,8 +20,6 @@ pub enum Expr {
 }
 
 peg::parser!{pub grammar parser() for str {
-    use super::Expr;
-
     pub rule function() -> (String, Vec<String>, String, Vec<Expr>)
         = [' ' | '\t' | '\n']* "fn" blanks() name:identifier() blanks()
         "(" params:((blanks() i:identifier() blanks() {i}) ** ",") ")" blanks()
@@ -42,7 +40,7 @@ peg::parser!{pub grammar parser() for str {
         = if_else()
         / while_loop()
         / i:identifier() blanks() "=" blanks() e:expression() { Expr::Assign(i, Box::new(e)) }
-        / compare()
+        / binary_op()
 
     rule if_else() -> Expr
         = "if" blanks() e:expression() blanks() "{" blanks() "\n"
@@ -55,29 +53,24 @@ peg::parser!{pub grammar parser() for str {
         loop_body:statements() blanks() "}"
         { Expr::WhileLoop(Box::new(e), loop_body) }
 
-    rule compare() -> Expr
-        = a:sum() blanks() "==" blanks() b:compare() { Expr::Eq(Box::new(a), Box::new(b)) }
-        / a:sum() blanks() "!=" blanks() b:compare() { Expr::Ne(Box::new(a), Box::new(b)) }
-        / a:sum() blanks() "<"  blanks() b:compare() { Expr::Lt(Box::new(a), Box::new(b)) }
-        / a:sum() blanks() "<=" blanks() b:compare() { Expr::Le(Box::new(a), Box::new(b)) }
-        / a:sum() blanks() ">"  blanks() b:compare() { Expr::Gt(Box::new(a), Box::new(b)) }
-        / a:sum() blanks() ">=" blanks() b:compare() { Expr::Ge(Box::new(a), Box::new(b)) }
-        / sum()
-
-    rule sum() -> Expr
-        = a:product() blanks() "+" blanks() b:sum() { Expr::Add(Box::new(a), Box::new(b)) }
-        / a:product() blanks() "-" blanks() b:sum() { Expr::Sub(Box::new(a), Box::new(b)) }
-        / product()
-
-    rule product() -> Expr
-        = a:call_or_identifier_or_literal() blanks() "*" blanks() b:product() { Expr::Mul(Box::new(a), Box::new(b)) }
-        / a:call_or_identifier_or_literal() blanks() "/" blanks() b:product() { Expr::Div(Box::new(a), Box::new(b)) }
-        / call_or_identifier_or_literal()
-
-    rule call_or_identifier_or_literal() -> Expr
-        = i:identifier() blanks() "(" args:((blanks() e:expression() blanks() {e}) ** ",") ")" { Expr::Call(i, args) }
-        / i:identifier() { Expr::Identifier(i) }
-        / literal()
+     rule binary_op() -> Expr = precedence!{
+        a:@ blanks() "==" blanks() b:(@) { Expr::Eq(Box::new(a), Box::new(b)) }
+        a:@ blanks() "!=" blanks() b:(@) { Expr::Ne(Box::new(a), Box::new(b)) }
+        a:@ blanks() "<"  blanks() b:(@) { Expr::Lt(Box::new(a), Box::new(b)) }
+        a:@ blanks() "<=" blanks() b:(@) { Expr::Le(Box::new(a), Box::new(b)) }
+        a:@ blanks() ">"  blanks() b:(@) { Expr::Gt(Box::new(a), Box::new(b)) }
+        a:@ blanks() ">=" blanks() b:(@) { Expr::Ge(Box::new(a), Box::new(b)) }
+        --
+        a:@ blanks() "+" blanks() b:(@) { Expr::Add(Box::new(a), Box::new(b)) }
+        a:@ blanks() "-" blanks() b:(@) { Expr::Sub(Box::new(a), Box::new(b)) }
+        --
+        a:@ blanks() "*" blanks() b:(@) { Expr::Mul(Box::new(a), Box::new(b)) }
+        a:@ blanks() "/" blanks() b:(@) { Expr::Div(Box::new(a), Box::new(b)) }
+        --
+        i:identifier() blanks() "(" args:((blanks() e:expression() blanks() {e}) ** ",") ")" { Expr::Call(i, args) }
+        i:identifier() { Expr::Identifier(i) }
+        l:literal() { l }
+    }
 
     rule identifier() -> String
         = n:$(['a'..='z'|'A'..='Z'|'_']['a'..='z'|'A'..='Z'|'0'..='9'|'_']*) { n.to_owned() }
