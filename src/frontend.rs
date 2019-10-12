@@ -21,7 +21,7 @@ pub enum Expr {
 
 peg::parser!{pub grammar parser() for str {
     pub rule function() -> (String, Vec<String>, String, Vec<Expr>)
-        = [' ' | '\t' | '\n']* "fn" blanks() name:identifier() blanks()
+        = [' '|'\t'|'\n']* "fn" blanks() name:identifier() blanks()
         "(" params:((blanks() i:identifier() blanks() {i}) ** ",") ")" blanks()
         "->" blanks()
         "(" returns:(blanks() i:identifier() blanks() {i}) ")" blanks()
